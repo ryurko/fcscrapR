@@ -83,7 +83,9 @@ srb_crc_commentary %>%
   dplyr::filter(!is.na(shot_result)) %>%
   ggplot(aes(x = shot_by_team, fill = shot_result)) +
   geom_bar() + labs(x = "Team", y = "Count", 
-                    fill = "Shot result") +
+                    fill = "Shot result",
+                    title = "Distribution of shot attempts for Costa Rica vs Serbia by result",
+                    caption = "Data from ESPN, accessed with fcscrapR") +
   scale_fill_manual(values = c("darkorange", "darkblue", "darkred", "darkcyan")) +
   theme_bw()
 ```
