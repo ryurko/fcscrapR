@@ -111,6 +111,6 @@ scrape_scoreboard_ids()
 ## Acknowledgements
 
 Many thanks to the sports analytics community on Twitter for guiding me
-to various resources to soccer. Big thanks to [Brendan
+to various resources of soccer data. Big thanks to [Brendan
 Kent](https://twitter.com/brendankent) for pointing me to the commentary
 data.
