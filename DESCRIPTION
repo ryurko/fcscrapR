@@ -1,11 +1,27 @@
 Package: fcscrapR
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Compiling soccer commentary data from ESPN for easy use in R
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Authors@R: c(person("Ron", "Yurko", role = c("aut", "cre"),email = "ryurko21@gmail.com"))
+Maintainer: Ron Yurko <ryurko21@gmail.com>
+Description: This package allows data driven sports enthusiasts to easily access
+    event data for soccer games from ESPN. The functions within this package help
+    find, parse, and clean the commentary data from ESPN for R users.
+Depends: R (>= 3.4.0),
+         magrittr
+Imports: RCurl,
+         stringr,
+         lubridate,
+         dplyr,
+         zoo,
+         scrapeR,
+         rvest,
+         xml2
+Suggests: testthat,
+          knitr,
+          rmarkdown
+License: CC0
 Encoding: UTF-8
 LazyData: true
+URL: https://github.com/ryurko/fcscrapR
+RoxygenNote: 6.0.1
