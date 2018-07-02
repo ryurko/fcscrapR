@@ -5,20 +5,25 @@
 #' today_game_ids <- scrape_scoreboard_ids()
 #' @export
 
-scrape_scoreboard_ids <- function() {
+scrape_scoreboard_ids <- function(league,date_in) {
+  require(lubridate)
+  require(stringr)
+  ## conver date to yyyy-mm-dd
+  date_in2 <- as.Date(parse_date_time(date_in,"dmy"))
+  date_f <- str_replace_all(as.character(date_in2), "[^[:alnum:]]", "")
 
-  # Access ESPN's soccer scoreboard and parse it so the soccer match urls
-  # can be grabbed:
-  scoreboard_url <- scrapeR::scrape(url = "http://www.espn.com/soccer/scoreboard",
-                                headers = TRUE,
-                                parse = FALSE)
+  ## conver date to yyyy-mm-dd
+  base_url <- "http://www.espn.com"
+  league_index <- which(league == league_df$league_names)
+  combine_url <- paste0(base_url,league_df$league_urls[league_index],"/date/",date_f)
+  combine_url
 
-  # Find all the soccer match urls then return the unique game ids:
-  scoreboard_url %>%
-    unlist() %>%
-    stringr::str_extract_all("\"http://www.espn.com/soccer/match\\?gameId=[0-9]{6}\"") %>%
-    unlist() %>%
-    stringr::str_extract("[0-9]{6}") %>%
-    unlist() %>%
-    unique()
+  read_html(url) %>%
+    html_nodes("summary") %>%
+    html_text()
+
+
+
+
+
 }
