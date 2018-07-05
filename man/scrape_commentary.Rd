@@ -32,6 +32,7 @@ created:
  \item{"match_end"} - Indicator for when the match ends
  \item{"shot_attempt"} - Indicator for if a shot was attempted
  \item{"penalty_shot"} - Indicator for if a the shot attempt was a penalty shot
+ which includes penalty shootout
  \item{"shot_result"} - Outcome for shot attempt, either: goal, blocked,
  missed, saved, or own_goal
  \item{"shot_with"} -  Which foot (left or right) or header person shot with
@@ -76,9 +77,13 @@ created:
  \item{"team_conceded_penalty"} - Which team conceded the penalty
  \item{"player_drew_penalty"} - Which player drew the penalty
  \item{"player_conceded_penalty"} - Which player conceded the penalty
- \item{"half"} - Numeric indicator for the half
+ \item{"half"} - Numeric indicator for the half: 1 = first, 2 = second,
+ 3 = first extra, 4 = second extra, 5 = penalty shootout
  \item{"comment_id"} - Row id for comment
  \item{"match_time_numeric"} - Numeric value for match time minutes
+ \item{"stoppage_time"} - Indicator for if in stoppage time
+ \item{"team_one_penalty_score"} - Tally of team one score in penalty shootout
+ \item{"team_two_penalty_score"} - Tally of team two score in penalty shootout
 }
 }
 \examples{

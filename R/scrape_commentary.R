@@ -16,6 +16,7 @@
 #'  \item{"match_end"} - Indicator for when the match ends
 #'  \item{"shot_attempt"} - Indicator for if a shot was attempted
 #'  \item{"penalty_shot"} - Indicator for if a the shot attempt was a penalty shot
+#'  which includes penalty shootout
 #'  \item{"shot_result"} - Outcome for shot attempt, either: goal, blocked,
 #'  missed, saved, or own_goal
 #'  \item{"shot_with"} -  Which foot (left or right) or header person shot with
@@ -60,9 +61,13 @@
 #'  \item{"team_conceded_penalty"} - Which team conceded the penalty
 #'  \item{"player_drew_penalty"} - Which player drew the penalty
 #'  \item{"player_conceded_penalty"} - Which player conceded the penalty
-#'  \item{"half"} - Numeric indicator for the half
+#'  \item{"half"} - Numeric indicator for the half: 1 = first, 2 = second,
+#'  3 = first extra, 4 = second extra, 5 = penalty shootout
 #'  \item{"comment_id"} - Row id for comment
 #'  \item{"match_time_numeric"} - Numeric value for match time minutes
+#'  \item{"stoppage_time"} - Indicator for if in stoppage time
+#'  \item{"team_one_penalty_score"} - Tally of team one score in penalty shootout
+#'  \item{"team_two_penalty_score"} - Tally of team two score in penalty shootout
 #' }
 #' @return Data frame of the match commentary with a row for each event in the
 #' commentary along with the columns described above.
@@ -72,8 +77,6 @@
 #' @export
 
 scrape_commentary <- function(game_id) {
-
-
 
   # Create the game url:
   game_url <- tryCatch(xml2::read_html(paste("http://www.espn.com/soccer/commentary?gameId=",
@@ -120,6 +123,34 @@ scrape_commentary <- function(game_id) {
   # Manual check for DC United since they're in commentary as D.C. United:
   game_teams <- ifelse(game_teams == "DC United",
                        "D.C. United", game_teams)
+
+  # Next, need to do a check regarding the fact ESPN will sometimes use
+  # Spanish spelling for the team name inside the commentary, will first
+  # create a vector original_game_teams to store the original game_teams:
+  original_game_teams <- game_teams
+
+  # Need to find the commentary that is either half ends or match ends to then
+  # get the team names used in the dataset:
+  commentary_game_teams <- commentary_df %>%
+    dplyr::pull(commentary) %>%
+    .[stringr::str_detect(., "First Half ends")] %>%
+    .[1] %>%
+    stringr::str_remove("First Half ends, ") %>%
+    stringr::str_split(",") %>%
+    unlist() %>%
+    stringr::str_extract("(([:alpha:])+(\\s){0,1})+") %>%
+    stringr::str_trim()
+
+
+  # Find which team names don't match:
+  incorrect_team_i <- which(!(original_game_teams %in% commentary_game_teams))
+
+  # If the length of this is 1 exactly then modify that team in game_teams:
+  if (length(incorrect_team_i) == 1) {
+    game_teams[incorrect_team_i] <- commentary_game_teams[incorrect_team_i]
+  }
+
+  # Both would require more sophisticated matching techniques
 
   # Next add columns for these two teams and then go through a series of conditional
   # parsing of the actual commentary to extract useful features for analysis:
@@ -193,25 +224,25 @@ scrape_commentary <- function(game_id) {
                                                                paste("Goal\\!(\\s){1,2}",
                                                                      team_one, " ([:digit:]){1,2}, ",
                                                                      team_two, " ([:digit:]){1,2}\\. ",
-                                                                     "([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? ",
+                                                                     "([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? ",
                                                                      "\\((",team_one,"|",team_two,")\\)", sep = "")) %>%
-                                            stringr::str_extract("\\.(\\s){1}([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?( (S|J)r\\.)?(\\s){1}\\(") %>%
-                                            stringr::str_extract("([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?"),
+                                            stringr::str_extract("\\.(\\s){1}([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?( (S|J)r\\.)?(\\s){1}\\(") %>%
+                                            stringr::str_extract("([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?"),
                                           NA),
                   # Next for attempts that are not penalty shots:
                   shot_by_player = ifelse(shot_result %in% c("blocked", "saved", "missed") & penalty_shot == 0,
                                           stringr::str_extract(commentary,
                                                                paste("Attempt(\\s){1}", shot_result, "\\.(\\s){1}",
-                                                                     "([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?( (S|J)r\\.)? ",
+                                                                     "([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?( (S|J)r\\.)? ",
                                                                      "\\((",team_one,"|",team_two,")\\)", sep = "")) %>%
-                                            stringr::str_extract("\\.(\\s){1}([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?(\\s){1}\\(") %>%
-                                            stringr::str_extract("([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?"),
+                                            stringr::str_extract("\\.(\\s){1}([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?(\\s){1}\\(") %>%
+                                            stringr::str_extract("([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?"),
                                           shot_by_player),
                   # Now for penalty shots:
                   shot_by_player = ifelse(shot_result %in% c("saved", "missed") & penalty_shot == 1,
                                           stringr::str_extract(commentary,
                                                                paste("Penalty(\\s){1,2}", shot_result, "\\!(\\s){1,2}",
-                                                                     "([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?( (S|J)r\\.)? \\(", sep = "")) %>%
+                                                                     "([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?( (S|J)r\\.)? \\(", sep = "")) %>%
                                             stringr::str_remove(paste("Penalty ", shot_result,"\\!(\\s){1,2}", sep = "")) %>%
                                             stringr::str_remove(" \\("),
                                           shot_by_player),
@@ -219,11 +250,12 @@ scrape_commentary <- function(game_id) {
                   shot_by_player = ifelse(shot_result == "own_goal",
                                           stringr::str_extract(commentary,
                                                                paste("Own Goal by ",
-                                                                     "([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?,", sep = "")) %>%
-                                            stringr::str_extract("([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?"),
+                                                                     "([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?,", sep = "")) %>%
+                                            stringr::str_remove("Own Goal by ") %>%
+                                            stringr::str_remove(","),
                                           shot_by_player),
                   # Which team shot:
-                  shot_by_team = ifelse(!is.na(shot_result),
+                  shot_by_team = ifelse(!is.na(shot_result) & shot_result != "own_goal",
                                         stringr::str_extract(commentary,
                                                              paste("\\(",
                                                                    team_one,"|",
@@ -231,6 +263,14 @@ scrape_commentary <- function(game_id) {
                                           stringr::str_extract(paste(team_one, "|",
                                                                      team_two, sep = "")),
                                         NA),
+                  # Which team shot the own_goal:
+                  shot_by_team = ifelse(!is.na(shot_result) & shot_result == "own_goal",
+                                        stringr::str_extract(commentary,
+                                                             paste(", ", team_one, "|",
+                                                                   team_two, "\\.", sep = "")) %>%
+                                          stringr::str_extract(paste(team_one, "|",
+                                                                     team_two, sep = "")),
+                                        shot_by_team),
                   # What did they shoot with:
                   shot_with = ifelse(shot_attempt == 1,
                                      stringr::str_extract(commentary,
@@ -276,7 +316,7 @@ scrape_commentary <- function(game_id) {
                   # Who had the assist (even if it wasn't a goal, just to record):
                   assist_by_player = ifelse(stringr::str_detect(commentary, "Assisted by"),
                                             stringr::str_extract(commentary,
-                                                                 "Assisted by ([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?((\\.)|with)?") %>%
+                                                                 "Assisted by ([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?((\\.)|with)?") %>%
                                               stringr::str_remove("Assisted by ") %>%
                                               stringr::str_remove("\\.") %>% stringr::str_remove(" with"), NA),
                   # Foul indicator:
@@ -286,7 +326,7 @@ scrape_commentary <- function(game_id) {
                   foul_by_player = ifelse(foul == 1,
                                           stringr::str_remove(commentary,
                                                               "Foul by ") %>%
-                                            stringr::str_extract("([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? \\(") %>%
+                                            stringr::str_extract("([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? \\(") %>%
                                             stringr::str_remove(" \\("), NA),
                   # Which team fouled:
                   foul_by_team = ifelse(foul == 1,
@@ -330,13 +370,13 @@ scrape_commentary <- function(game_id) {
                   # Offside player:
                   offside_player = ifelse(offside == 1,
                                           stringr::str_extract(commentary,
-                                                               ", but ([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? is caught") %>%
+                                                               ", but ([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? is caught") %>%
                                             stringr::str_remove(", but ") %>%
                                             stringr::str_remove(" is caught"), NA),
                   # Offside pass player:
                   offside_pass_from = ifelse(offside == 1,
                                              stringr::str_extract(commentary,
-                                                                  "\\. ([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? tries") %>%
+                                                                  "\\. ([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? tries") %>%
                                                stringr::str_remove("\\. ") %>%
                                                stringr::str_remove(" tries"), NA),
 
@@ -352,13 +392,13 @@ scrape_commentary <- function(game_id) {
                   # Player shown card:
                   card_player = ifelse(shown_card == 1,
                                        stringr::str_extract(commentary,
-                                                            "^([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? \\(") %>%
+                                                            "^([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? \\(") %>%
                                          stringr::str_remove(" \\("),
                                        NA),
                   # Team shown card:
                   card_team = ifelse(shown_card == 1,
                                      stringr::str_extract(commentary,
-                                                          paste("([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? \\(",
+                                                          paste("([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? \\(",
                                                                 team_one, "|", team_two, "\\)", sep = "")) %>%
                                        stringr::str_extract(paste(team_one, "|", team_two, sep = "")),
                                      NA),
@@ -398,7 +438,7 @@ scrape_commentary <- function(game_id) {
                   # Which player won free kick:
                   free_kick_player = ifelse(free_kick_won == 1,
                                             stringr::str_extract(commentary,
-                                                                 "^([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? \\(") %>%
+                                                                 "^([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? \\(") %>%
                                               stringr::str_remove(" \\("),
                                             NA),
                   # Which team won free kick:
@@ -427,7 +467,7 @@ scrape_commentary <- function(game_id) {
                   # Who conceded the corner:
                   corner_conceded_by = ifelse(corner == 1,
                                               stringr::str_extract(commentary,
-                                                                   "Conceded by ([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?") %>%
+                                                                   "Conceded by ([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?") %>%
                                                 stringr::str_remove("Conceded by "),
                                               NA),
 
@@ -448,12 +488,12 @@ scrape_commentary <- function(game_id) {
                   # Sub player:
                   sub_player = ifelse(substitution == 1,
                                       stringr::str_extract(commentary,
-                                                           "([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? replaces") %>%
+                                                           "([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? replaces") %>%
                                         stringr::str_remove(" replaces"), NA),
                   # Replaced player:
                   replaced_player = ifelse(substitution == 1,
                                            stringr::str_extract(commentary,
-                                                                "replaces ([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?") %>%
+                                                                "replaces ([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?") %>%
                                              stringr::str_remove("replaces ") %>%
                                              stringr::str_remove(" because of") %>%
                                              stringr::str_remove(" because"), NA),
@@ -477,14 +517,14 @@ scrape_commentary <- function(game_id) {
                                                                                         team_one, "|",
                                                                                         team_two, sep = "")),
                                                stringr::str_extract(commentary,
-                                                                    "\\. ([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? draws a") %>%
+                                                                    "\\. ([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? draws a") %>%
                                                  stringr::str_remove("\\. ") %>%
                                                  stringr::str_remove(" draws a"), NA),
                   # Player conceded penalty:
                   player_conceded_penalty = ifelse(penalty == 1 & stringr::str_detect(commentary,
                                                                                     "^Penalty conceded by"),
                                                  stringr::str_extract(commentary,
-                                                                      "^Penalty conceded by ([:alpha:]){1,20}(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? \\(") %>%
+                                                                      "^Penalty conceded by ([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)? \\(") %>%
                                                    stringr::str_remove("Penalty conceded by ") %>%
                                                    stringr::str_remove(" \\("), NA),
                   # Team conceded penalty:
@@ -497,31 +537,76 @@ scrape_commentary <- function(game_id) {
 
                   # Create a numeric marker for the half:
                   half = ifelse(stringr::str_detect(commentary,
-                                                    "First Half"),
-                                1,
-                                ifelse(stringr::str_detect(commentary,
-                                                           "Second Half"),
-                                       2, NA)),
+                                               "First Half (begins|ends)"), 1,
+                           ifelse(stringr::str_detect(commentary,
+                                                      "Second Half (begins|ends)"),
+                                  2, ifelse(stringr::str_detect(commentary, "First Half Extra"),
+                                            3, ifelse(stringr::str_detect(commentary, "Second Half Extra"),
+                                                      4, ifelse(stringr::str_detect(commentary, "Penalty Shootout (begins|ends)"), 5, NA))))),
                   # Create a comment ID column and which will allow the data to be
                   # reordered and then manipulated more to populate the half and
                   # score variables:
-                  comment_id = seq(from = n(), to = 1, by = -1)) %>%
+                  comment_id = seq(from = n(), to = 1, by = -1),
+                  # Indicator variable for stoppage time:
+                  stoppage_time = ifelse(stringr::str_detect(match_time,
+                                                             "\\+"), 1, 0)) %>%
     # Reorder the rows so the game starts is first:
     dplyr::arrange(comment_id) %>%
     # Fill in the missings based on the assumption all changes in half or score
     # are already captured:
     dplyr::mutate(half = zoo::na.locf(half, na.rm = FALSE),
                   team_one_score = zoo::na.locf(team_one_score, na.rm = FALSE),
-                  team_two_score = zoo::na.locf(team_two_score, na.rm = FALSE))
+                  team_two_score = zoo::na.locf(team_two_score, na.rm = FALSE),
+                  # Update the penalty_shot indicator for the penalty shootout:
+                  penalty_shot = ifelse(half == 5, 1, penalty_shot),
+                  # Get the player who attempted the shot during penalty_shootouts:
+                  shot_by_player = ifelse(penalty_shot == 1 & half == 5,
+                                          stringr::str_extract(commentary,
+                                                               "(\\.|\\!)(\\s){1}([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?(\\s){1}\\(") %>%
+                                            stringr::str_extract("([:alpha:]){1,20}(')?(\\s)?([:alpha:]){1,20}(('|-| )?([:alpha:]){1,14})?('o)?((\\s){1}(S|J)r\\.)?"),
+                                          shot_by_player),
+                  # Create columns for the penalty_goal counts for each team,
+                  # based on the numbers in () after the corresponding team's
+                  # score - where 0 happens when the () is missing:
+                  team_one_penalty_score = ifelse(penalty_shot == 1 & half == 5,
+                                                  stringr::str_extract(commentary,
+                                                                       paste(team_one,
+                                                                             " ", team_one_score,
+                                                                             "(\\(([:digit:]){1}\\))?(,|\\.)",
+                                                                             sep = "")),
+                                                  NA),
+                  team_one_penalty_score = ifelse(!is.na(team_one_penalty_score),
+                                                  ifelse(stringr::str_detect(team_one_penalty_score,
+                                                                             "\\(([:digit:]){1}\\)"),
+                                                         stringr::str_extract(team_one_penalty_score,
+                                                                              "\\(([:digit:]){1}\\)") %>%
+                                                           stringr::str_extract("([:digit:]){1}"),
+                                                         0), NA),
+                  team_two_penalty_score = ifelse(penalty_shot == 1 & half == 5,
+                                                  stringr::str_extract(commentary,
+                                                                       paste(team_two,
+                                                                             " ", team_two_score,
+                                                                             "(\\(([:digit:]){1}\\))?(,|\\.)",
+                                                                             sep = "")),
+                                                  NA),
+                  team_two_penalty_score = ifelse(!is.na(team_two_penalty_score),
+                                                  ifelse(stringr::str_detect(team_two_penalty_score,
+                                                                             "\\(([:digit:]){1}\\)"),
+                                                         stringr::str_extract(team_two_penalty_score,
+                                                                              "\\(([:digit:]){1}\\)") %>%
+                                                           stringr::str_extract("([:digit:]){1}"),
+                                                         0), NA),
+                  # Make the teams the old names again to match the top:
+                  team_one = original_game_teams[1],
+                  team_two = original_game_teams[2])
     # Create a new form of match_time that is numeric:
     commentary_df$match_time_numeric <- sapply(c(1:nrow(commentary_df)),
                                               function(x) {
                                                 ifelse(stringr::str_detect(commentary_df$match_time[x], "-"), NA,
                                                        stringr::str_extract_all(commentary_df$match_time[x],
-                                                                "([:digit:]){1,2}") %>% unlist() %>%
+                                                                "([:digit:]){1,3}") %>% unlist() %>%
                                                          as.numeric() %>% sum())
                                               })
-
 
   # Return the commentary_df
   return(commentary_df)
