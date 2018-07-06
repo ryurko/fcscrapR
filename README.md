@@ -70,7 +70,9 @@ colnames(srb_crc_commentary)
 #> [51] "penalty"                 "team_drew_penalty"      
 #> [53] "player_drew_penalty"     "player_conceded_penalty"
 #> [55] "team_conceded_penalty"   "half"                   
-#> [57] "comment_id"              "match_time_numeric"
+#> [57] "comment_id"              "stoppage_time"          
+#> [59] "team_one_penalty_score"  "team_two_penalty_score" 
+#> [61] "match_time_numeric"
 ```
 
 Can quickly make a chart showing the difference in shot attempts for
@@ -92,23 +94,57 @@ srb_crc_commentary %>%
 
 ![](README-unnamed-chunk-3-1.png)<!-- -->
 
-## Gather Game IDs
+## Gather game ids
 
 The only function available currently to get game ids is
 `scrape_scoreboard_ids()` which pulls the game ids for all soccer
-matches on ESPN’s soccer scoreboard:
-<http://www.espn.com/soccer/scoreboard>
-
-Example from running it on June 20th, 2018:
+matches on ESPN’s soccer scoreboard given a league or tournament. You
+must use a league or tournament that has an associated url in the
+`league_url_data` table provided in `fcscrapR`:
 
 ``` r
-scrape_scoreboard_ids()
+# install.packages(pander)
+league_url_data %>%
+  head() %>%
+  pander::pander()
+```
+
+|           name           |
+| :----------------------: |
+|     show all leagues     |
+|      fifa world cup      |
+|  uefa champions league   |
+|    uefa europa league    |
+|  english premier league  |
+| spanish primera división |
+
+Table continues below
+
+|                               url                               |
+| :-------------------------------------------------------------: |
+|      <http://www.espn.com/soccer/scoreboard/_/league/all>       |
+|   <http://www.espn.com/soccer/scoreboard/_/league/fifa.world>   |
+| <http://www.espn.com/soccer/scoreboard/_/league/uefa.champions> |
+|  <http://www.espn.com/soccer/scoreboard/_/league/uefa.europa>   |
+|     <http://www.espn.com/soccer/scoreboard/_/league/eng.1>      |
+|     <http://www.espn.com/soccer/scoreboard/_/league/esp.1>      |
+
+Here’s an example of grabbing the World Cup games from June 20th, 2018:
+
+``` r
+scrape_scoreboard_ids(scoreboard_name = "fifa world cup", 
+                      game_date = "2018-06-20") %>%
+  pander::pander()
 #> Loading required package: XML
 #> Loading required package: RCurl
 #> Loading required package: bitops
-#>  [1] "498185" "498184" "498183" "511619" "511617" "511613" "511620"
-#>  [8] "504476" "510974" "510985" "503290" "503289"
 ```
+
+| game\_id | team\_one |  team\_two   |
+| :------: | :-------: | :----------: |
+|  498185  | Portugal  |   Morocco    |
+|  498184  |  Uruguay  | Saudi Arabia |
+|  498183  |   Iran    |    Spain     |
 
 ## Acknowledgements
 

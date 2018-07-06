@@ -2,17 +2,29 @@
 % Please edit documentation in R/scrape_game_ids.R
 \name{scrape_scoreboard_ids}
 \alias{scrape_scoreboard_ids}
-\title{Scrapes the game ids from the current soccer scoreboard on ESPN}
+\title{Scrapes the game ids from ESPN's soccer scoreboard}
 \usage{
-scrape_scoreboard_ids()
+scrape_scoreboard_ids(scoreboard_name = "show all leagues",
+  game_date = Sys.Date())
+}
+\arguments{
+\item{scoreboard_name}{Name of league or tournament (must be in the
+league_url_data table) to access the scoreboard for in order to obtain the
+game ids (default is "show all leagues").}
+
+\item{game_date}{Date to find scoreboard of game ids for, using the format
+of "YYYY-MM-DD" (default is the current date).}
 }
 \value{
-Vector of game ids from the current day's soccer scoreboard
+Data frame of game ids and columns for each team from the given
+league/tournament and date's soccer scoreboard.
 }
 \description{
-Scrapes the game ids from the current soccer scoreboard on ESPN
+Scrapes the game ids from ESPN's soccer scoreboard
 }
 \examples{
-# Scrape today's game ids:
+# Scrape today's game ids for all leagues:
 today_game_ids <- scrape_scoreboard_ids()
+# Scrape world cup games from June 28th, 2018:
+wc_game_ids <- scrape_scoreboard_ids("fifa world cup", "2018-06-18")
 }

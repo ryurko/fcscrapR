@@ -2,7 +2,9 @@ Package: fcscrapR
 Type: Package
 Title: Compiling soccer commentary data from ESPN for easy use in R
 Version: 0.1.0
-Authors@R: c(person("Ron", "Yurko", role = c("aut", "cre"),email = "ryurko21@gmail.com"))
+Authors@R: c(person("Ron", "Yurko", role = c("aut", "cre"),email = "ryurko21@gmail.com"),
+             person("Meyappan", "Subbaiah", role = "aut", email = "meysubb@gmail.com"),
+             person("Luke", "Benz", role = "ctb", email = "luke.benz@yale.edu"))
 Maintainer: Ron Yurko <ryurko21@gmail.com>
 Description: This package allows data driven sports enthusiasts to easily access
     event data for soccer games from ESPN. The functions within this package help
@@ -16,7 +18,9 @@ Imports: RCurl,
          zoo,
          scrapeR,
          rvest,
-         xml2
+         xml2,
+         assertthat,
+         purrr (>= 0.2.5)
 Suggests: testthat,
           knitr,
           rmarkdown
