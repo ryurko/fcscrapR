@@ -26,7 +26,7 @@ scrape_scoreboard_ids <- function(scoreboard_name = "show all leagues",
                           "date", stringr::str_remove_all(game_date, "-"), sep = "/")
 
   # Parse this url so the soccer match urls can be grabbed:
-  scoreboard_parse <- scrapeR::scrape(url = scoreboard_url, headers = TRUE,
+  scoreboard_parse <- scrapeR::scrape(url = scoreboard_url, headers = TRUE,follow = TRUE,
                                     parse = FALSE)
 
   # First check to see if there are any soccer matches available, if there
