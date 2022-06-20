@@ -546,7 +546,7 @@ scrape_commentary <- function(game_id) {
                   # Create a comment ID column and which will allow the data to be
                   # reordered and then manipulated more to populate the half and
                   # score variables:
-                  comment_id = seq(from = n(), to = 1, by = -1),
+                  comment_id = seq(from = dplyr::n(), to = 1, by = -1),
                   # Indicator variable for stoppage time:
                   stoppage_time = ifelse(stringr::str_detect(match_time,
                                                              "\\+"), 1, 0)) %>%
